@@ -2,69 +2,117 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Stock Chart</title>
   <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <style>
+    :root { --bg: #0d1117; --panel: rgba(22, 27, 34, 0.85); --line: #30363d;
+            --text: #c9d1d9; --muted: #8b949e; --amber: #ffb000; --cyan: #39c5cf; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 16px; background: #0d1117; color: #c9d1d9;
-           font-family: ui-monospace, Menlo, monospace; }
-    h1 { margin: 0 0 12px; font-size: 18px; color: #ffb000; }
-    .search { position: relative; max-width: 420px; }
-    input { width: 100%; padding: 12px; font-size: 16px; background: #161b22;
-            color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; }
-    ul { position: absolute; z-index: 10; left: 0; right: 0; margin: 4px 0 0; padding: 0;
-         list-style: none; background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
-    ul:empty { display: none; }
-    li { padding: 12px; cursor: pointer; border-bottom: 1px solid #21262d; }
-    li:hover { background: #21262d; color: #39c5cf; }
-    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
-    button { padding: 10px 14px; font: inherit; background: #161b22; color: #c9d1d9;
-             border: 1px solid #30363d; border-radius: 6px; cursor: pointer; }
-    button.active { border-color: #ffb000; color: #ffb000; }
-    #status { min-height: 1.2em; margin: 0 0 8px; color: #39c5cf; }
-    #chart { width: 100%; height: 60vh; min-height: 300px; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+                 color: var(--text); font-family: ui-monospace, Menlo, monospace; }
+    #chart { position: fixed; inset: 0; }
+
+    .toolbar { position: absolute; top: 12px; left: 12px; right: 80px; z-index: 5;
+               display: flex; flex-wrap: wrap; align-items: center; gap: 8px; pointer-events: none; }
+    .toolbar > * { pointer-events: auto; }
+    .pill { display: flex; align-items: center; gap: 2px; padding: 4px; background: var(--panel);
+            border: 1px solid var(--line); border-radius: 8px; backdrop-filter: blur(6px); }
+    button { font: inherit; font-size: 13px; color: var(--text); background: transparent;
+             border: 0; border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+    button:hover { color: var(--cyan); }
+    button.active { background: #21262d; color: var(--amber); }
+    #menu { font-size: 18px; line-height: 1; padding: 6px 10px; }
+    #symbol { color: var(--amber); font-weight: bold; padding: 0 8px; }
+    #legend { width: 100%; font-size: 12px; color: var(--muted); padding-left: 4px; }
+    #legend b { color: var(--text); font-weight: normal; }
+
+    .drawer { position: fixed; inset: 0; z-index: 20; display: none; }
+    .drawer.open { display: block; }
+    .backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); }
+    .sheet { position: absolute; top: 0; left: 0; bottom: 0; width: min(360px, 88vw);
+             padding: 16px; background: #161b22; border-right: 1px solid var(--line);
+             display: flex; flex-direction: column; gap: 12px; }
+    .sheet h2 { margin: 0; font-size: 14px; color: var(--amber); }
+    input { width: 100%; padding: 12px; font: inherit; font-size: 16px; color: var(--text);
+            background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+    input:focus { outline: 1px solid var(--cyan); }
+    ul { margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+    li { padding: 12px 8px; border-bottom: 1px solid #21262d; cursor: pointer; }
+    li:hover { color: var(--cyan); }
+    li small { display: block; color: var(--muted); }
+    .hint { font-size: 12px; color: var(--muted); }
   </style>
 </head>
 <body>
-  <h1>Stock Chart</h1>
-  <div class="search">
-    <input id="q" placeholder="Search a stock, e.g. apple" autocomplete="off">
-    <ul id="suggestions"></ul>
-  </div>
-  <div class="controls" id="ranges">
-    <button data-range="1d">1D</button>
-    <button data-range="5d">5D</button>
-    <button data-range="1w">1W</button>
-    <button data-range="1m" class="active">1M</button>
-    <button data-range="1y">1Y</button>
-    <button id="style">Line</button>
-  </div>
-  <p id="status"></p>
   <div id="chart"></div>
 
+  <div class="toolbar">
+    <div class="pill">
+      <button id="menu" aria-label="Search stocks">☰</button>
+      <span id="symbol">AAPL</span>
+    </div>
+    <div class="pill" id="ranges">
+      <button data-range="1d">1D</button>
+      <button data-range="5d">5D</button>
+      <button data-range="1w">1W</button>
+      <button data-range="1m" class="active">1M</button>
+      <button data-range="1y">1Y</button>
+    </div>
+    <div class="pill"><button id="style">Line</button></div>
+    <div id="legend"></div>
+  </div>
+
+  <div class="drawer" id="drawer">
+    <div class="backdrop" id="backdrop"></div>
+    <div class="sheet">
+      <h2>Search stock</h2>
+      <input id="q" placeholder="e.g. apple, MSFT" autocomplete="off">
+      <span class="hint" id="hint">Type at least 2 characters</span>
+      <ul id="suggestions"></ul>
+    </div>
+  </div>
+
   <script>
-    const state = { symbol: "AAPL", range: "1m", candles: true, data: [] };
     const $ = (id) => document.getElementById(id);
-    const setStatus = (text) => { $("status").textContent = text; };
+    const state = { symbol: "AAPL", range: "1m", candles: true, data: [] };
 
     const chart = LightweightCharts.createChart($("chart"), {
       autoSize: true,
-      layout: { background: { color: "#0d1117" }, textColor: "#c9d1d9" },
-      grid: { vertLines: { color: "#21262d" }, horzLines: { color: "#21262d" } },
-      timeScale: { timeVisible: true, secondsVisible: false }
+      layout: { background: { color: "#0d1117" }, textColor: "#8b949e" },
+      grid: { vertLines: { color: "#161b22" }, horzLines: { color: "#161b22" } },
+      rightPriceScale: { borderColor: "#30363d", scaleMargins: { top: 0.2, bottom: 0.08 } },
+      timeScale: { borderColor: "#30363d", timeVisible: true, secondsVisible: false },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal }
     });
     let series = null;
 
+    const fmt = (n) => n.toFixed(2);
+    function showLegend(bar) {
+      if (!bar) return $("legend").textContent = "";
+      $("legend").innerHTML = `O <b>${fmt(bar.open)}</b> H <b>${fmt(bar.high)}</b> ` +
+                              `L <b>${fmt(bar.low)}</b> C <b>${fmt(bar.close)}</b>`;
+    }
+    chart.subscribeCrosshairMove((p) => {
+      const bar = p.time && state.data.find((d) => d.time === p.time);
+      showLegend(bar || state.data[state.data.length - 1]);
+    });
+
+    function fit() { requestAnimationFrame(() => chart.timeScale().fitContent()); }
+    window.addEventListener("resize", fit);
+
     function draw() {
       if (series) chart.removeSeries(series);
-      series = state.candles ? chart.addCandlestickSeries() : chart.addLineSeries({ color: "#39c5cf" });
-      series.setData(state.candles ? state.data : state.data.map(d => ({ time: d.time, value: d.close })));
-      chart.timeScale().fitContent();
+      series = state.candles
+        ? chart.addCandlestickSeries()
+        : chart.addAreaSeries({ lineColor: "#39c5cf", topColor: "rgba(57,197,207,0.3)", bottomColor: "rgba(57,197,207,0)" });
+      series.setData(state.candles ? state.data : state.data.map((d) => ({ time: d.time, value: d.close })));
+      showLegend(state.data[state.data.length - 1]);
+      fit();
     }
 
     async function load() {
-      setStatus(`Loading ${state.symbol}…`);
+      $("legend").textContent = `Loading ${state.symbol}…`;
       try {
         const res = await fetch(`/api/series?symbol=${encodeURIComponent(state.symbol)}&range=${state.range}`);
         const body = await res.json();
@@ -72,16 +120,23 @@
         if (body.length === 0) throw new Error(`No data for ${state.symbol}`);
         state.data = body;
         draw();
-        setStatus(`${state.symbol} · ${state.range.toUpperCase()}`);
       } catch (err) {
-        setStatus(err.message);
+        $("legend").textContent = err.message;
       }
     }
 
+    function openDrawer() { $("drawer").classList.add("open"); $("q").focus(); }
+    function closeDrawer() { $("drawer").classList.remove("open"); }
+    $("menu").addEventListener("click", openDrawer);
+    $("backdrop").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
     function choose(symbol) {
       state.symbol = symbol.toUpperCase();
-      $("q").value = state.symbol;
+      $("symbol").textContent = state.symbol;
+      $("q").value = "";
       $("suggestions").replaceChildren();
+      closeDrawer();
       load();
     }
 
@@ -89,28 +144,35 @@
     $("q").addEventListener("input", () => {
       clearTimeout(timer);
       const q = $("q").value.trim();
-      if (q.length < 2) return $("suggestions").replaceChildren();
+      $("suggestions").replaceChildren();
+      if (q.length < 2) return $("hint").textContent = "Type at least 2 characters";
+      $("hint").textContent = "Searching…";
       timer = setTimeout(async () => {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-        if (!res.ok) return setStatus("Search unavailable, try again shortly");
+        if (!res.ok) return $("hint").textContent = "Search unavailable, try again shortly";
         const items = await res.json();
-        $("suggestions").replaceChildren(...items.map(s => {
+        $("hint").textContent = items.length ? "Tap a result, or press Enter to use the typed symbol" : "No matches";
+        $("suggestions").replaceChildren(...items.map((s) => {
           const li = document.createElement("li");
-          li.textContent = `${s.symbol} — ${s.name} (${s.exchange})`;
+          li.innerHTML = `${s.symbol}<small></small>`;
+          li.querySelector("small").textContent = `${s.name} · ${s.exchange}`;
           li.addEventListener("click", () => choose(s.symbol));
           return li;
         }));
       }, 300);
     });
-    $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && $("q").value.trim()) choose($("q").value.trim()); });
+    $("q").addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && $("q").value.trim()) choose($("q").value.trim());
+    });
 
     $("ranges").addEventListener("click", (e) => {
       const range = e.target.dataset.range;
       if (!range) return;
-      document.querySelectorAll("[data-range]").forEach(b => b.classList.toggle("active", b === e.target));
+      document.querySelectorAll("[data-range]").forEach((b) => b.classList.toggle("active", b === e.target));
       state.range = range;
       load();
     });
+
     $("style").addEventListener("click", () => {
       state.candles = !state.candles;
       $("style").textContent = state.candles ? "Line" : "Candles";
