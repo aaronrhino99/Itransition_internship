@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stock Chart</title>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 16px; background: #0d1117; color: #c9d1d9;
+           font-family: ui-monospace, Menlo, monospace; }
+    h1 { margin: 0 0 12px; font-size: 18px; color: #ffb000; }
+    .search { position: relative; max-width: 420px; }
+    input { width: 100%; padding: 12px; font-size: 16px; background: #161b22;
+            color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; }
+    ul { position: absolute; z-index: 10; left: 0; right: 0; margin: 4px 0 0; padding: 0;
+         list-style: none; background: #161b22; border: 1px solid #30363d; border-radius: 6px; }
+    ul:empty { display: none; }
+    li { padding: 12px; cursor: pointer; border-bottom: 1px solid #21262d; }
+    li:hover { background: #21262d; color: #39c5cf; }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    button { padding: 10px 14px; font: inherit; background: #161b22; color: #c9d1d9;
+             border: 1px solid #30363d; border-radius: 6px; cursor: pointer; }
+    button.active { border-color: #ffb000; color: #ffb000; }
+    #status { min-height: 1.2em; margin: 0 0 8px; color: #39c5cf; }
+    #chart { width: 100%; height: 60vh; min-height: 300px; }
+  </style>
+</head>
+<body>
+  <h1>Stock Chart</h1>
+  <div class="search">
+    <input id="q" placeholder="Search a stock, e.g. apple" autocomplete="off">
+    <ul id="suggestions"></ul>
+  </div>
+  <div class="controls" id="ranges">
+    <button data-range="1d">1D</button>
+    <button data-range="5d">5D</button>
+    <button data-range="1w">1W</button>
+    <button data-range="1m" class="active">1M</button>
+    <button data-range="1y">1Y</button>
+    <button id="style">Line</button>
+  </div>
+  <p id="status"></p>
+  <div id="chart"></div>
+
+  <script>
+    const state = { symbol: "AAPL", range: "1m", candles: true, data: [] };
+    const $ = (id) => document.getElementById(id);
+    const setStatus = (text) => { $("status").textContent = text; };
+
+    const chart = LightweightCharts.createChart($("chart"), {
+      autoSize: true,
+      layout: { background: { color: "#0d1117" }, textColor: "#c9d1d9" },
+      grid: { vertLines: { color: "#21262d" }, horzLines: { color: "#21262d" } },
+      timeScale: { timeVisible: true, secondsVisible: false }
+    });
+    let series = null;
+
+    function draw() {
+      if (series) chart.removeSeries(series);
+      series = state.candles ? chart.addCandlestickSeries() : chart.addLineSeries({ color: "#39c5cf" });
+      series.setData(state.candles ? state.data : state.data.map(d => ({ time: d.time, value: d.close })));
+      chart.timeScale().fitContent();
+    }
+
+    async function load() {
+      setStatus(`Loading ${state.symbol}…`);
+      try {
+        const res = await fetch(`/api/series?symbol=${encodeURIComponent(state.symbol)}&range=${state.range}`);
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || "Request failed");
+        if (body.length === 0) throw new Error(`No data for ${state.symbol}`);
+        state.data = body;
+        draw();
+        setStatus(`${state.symbol} · ${state.range.toUpperCase()}`);
+      } catch (err) {
+        setStatus(err.message);
+      }
+    }
+
+    function choose(symbol) {
+      state.symbol = symbol.toUpperCase();
+      $("q").value = state.symbol;
+      $("suggestions").replaceChildren();
+      load();
+    }
+
+    let timer;
+    $("q").addEventListener("input", () => {
+      clearTimeout(timer);
+      const q = $("q").value.trim();
+      if (q.length < 2) return $("suggestions").replaceChildren();
+      timer = setTimeout(async () => {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return setStatus("Search unavailable, try again shortly");
+        const items = await res.json();
+        $("suggestions").replaceChildren(...items.map(s => {
+          const li = document.createElement("li");
+          li.textContent = `${s.symbol} — ${s.name} (${s.exchange})`;
+          li.addEventListener("click", () => choose(s.symbol));
+          return li;
+        }));
+      }, 300);
+    });
+    $("q").addEventListener("keydown", (e) => { if (e.key === "Enter" && $("q").value.trim()) choose($("q").value.trim()); });
+
+    $("ranges").addEventListener("click", (e) => {
+      const range = e.target.dataset.range;
+      if (!range) return;
+      document.querySelectorAll("[data-range]").forEach(b => b.classList.toggle("active", b === e.target));
+      state.range = range;
+      load();
+    });
+    $("style").addEventListener("click", () => {
+      state.candles = !state.candles;
+      $("style").textContent = state.candles ? "Line" : "Candles";
+      if (state.data.length) draw();
+    });
+
+    load();
+  </script>
+</body>
+</html>
