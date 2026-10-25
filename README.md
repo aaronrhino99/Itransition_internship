@@ -6,7 +6,7 @@ Each task lives in its own folder and can be run and deployed on its own.
 
 | Task | Folder | Stack | Live |
 |---|---|---|---|
-| 3.5 – Stock chart | [`task3_5`](task3_5) | Ruby, Sinatra, Twelve Data API, Lightweight Charts | <RENDER_URL> |
+| 3.5 – Stock chart | [`task3_5`](task3_5) | Ruby, Sinatra, Twelve Data API, Lightweight Charts |https://stock-chart-2ehn.onrender.com/|
 
 ## Repository layout
 
