@@ -22,6 +22,4 @@ Each web app is a separate **Render Web Service** pointing at this repo, with
 **Root Directory** set to the task folder. Render then only redeploys a service
 when files inside its folder change.
 
-## Author
 
-Aaron Sibanda 
