@@ -1,4 +1,4 @@
-# Itransition Internship – Group #145 (Ruby)
+# Itransition Internship TASKS
 
 Each task lives in its own folder and can be run and deployed on its own.
 
