@@ -1,0 +1,14 @@
+/.bundle
+/log/*
+!/log/.keep
+/tmp/*
+!/tmp/.keep
+/tmp/pids/*
+/storage/*
+!/storage/.keep
+/public/assets
+/node_modules
+/config/master.key
+/config/credentials/*.key
+.env*
+.DS_Store
