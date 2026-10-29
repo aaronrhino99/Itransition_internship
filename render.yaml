@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: task4-user-admin
+    runtime: ruby
+    rootDir: task4
+    plan: free
+    region: frankfurt
+    buildCommand: bundle install && bin/rails assets:precompile && bin/rails db:migrate && bin/rails db:seed
+    startCommand: bundle exec puma -C config/puma.rb
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: RAILS_MASTER_KEY
+        sync: false
