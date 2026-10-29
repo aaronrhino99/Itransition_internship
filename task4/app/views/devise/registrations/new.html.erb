@@ -1,0 +1,28 @@
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-6 col-lg-4">
+    <h1 class="h4 mb-1">Create account</h1>
+    <p class="text-secondary small mb-4">Any non-empty password is accepted.</p>
+
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+
+      <div class="mb-3">
+        <%= f.label :name, class: "form-label" %>
+        <%= f.text_field :name, autofocus: true, autocomplete: "name", required: true, class: "form-control" %>
+      </div>
+      <div class="mb-3">
+        <%= f.label :email, "E-mail", class: "form-label" %>
+        <%= f.email_field :email, autocomplete: "email", required: true, class: "form-control" %>
+      </div>
+      <div class="mb-3">
+        <%= f.label :password, class: "form-label" %>
+        <%= f.password_field :password, autocomplete: "new-password", required: true, class: "form-control" %>
+      </div>
+      <%= f.submit "Sign up", class: "btn btn-primary w-100" %>
+    <% end %>
+
+    <p class="small text-center mt-3 mb-0">
+      Already registered? <%= link_to "Sign in", new_session_path(resource_name) %>
+    </p>
+  </div>
+</div>
