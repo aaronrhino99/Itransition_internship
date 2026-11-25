@@ -15,3 +15,23 @@ services:
         sync: false
       - key: RAILS_MASTER_KEY
         sync: false
+
+  # Course project: inventory app (deploys on every push to this branch)
+  - type: web
+    name: inventory-app
+    runtime: ruby
+    rootDir: inventory_app
+    branch: feature/inventory-app-foundation
+    plan: free
+    region: frankfurt
+    # assets:precompile also runs "yarn install" + esbuild + sass (jsbundling/cssbundling)
+    buildCommand: bundle install && bin/rails assets:precompile && bin/rails db:migrate
+    startCommand: bundle exec puma -C config/puma.rb
+    healthCheckPath: /up
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
