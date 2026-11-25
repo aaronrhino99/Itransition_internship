@@ -8,12 +8,7 @@ development:
 test:
   adapter: test
 
+# Production: PostgreSQL LISTEN/NOTIFY in the same database - no extra database, no Redis.
+# (On Neon use the DIRECT connection string; the "pooled" one breaks LISTEN/NOTIFY.)
 production:
-  adapter: solid_cable
-  connects_to:
-    database:
-      writing: cable
-  polling_interval: 0.1.seconds
-  message_retention: 1.day
-  writer_batch_size: 4
-  writer_batch_delay: 0.001.seconds
+  adapter: postgresql

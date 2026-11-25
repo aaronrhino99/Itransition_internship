@@ -38,3 +38,40 @@
 !/app/assets/builds/.keep
 
 /node_modules
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+config/master.key
+config/credentials/*.key
+
+# Ruby / Rails
+*.gem
+/.bundle
+/vendor/bundle
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+/storage/*
+!/storage/.keep
+/coverage/
+/public/assets/
+
+# Node
+node_modules/
+.npm/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated files
+*.log
